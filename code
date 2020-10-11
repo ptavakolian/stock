@@ -1,0 +1,56 @@
+import numpy as np
+import pandas as pd
+
+from matplotlib import pyplot as plt
+import pandas_datareader as pdr
+import datetime 
+from sklearn import datasets, linear_model
+stock_abb=input('What is the yahoo abbreviation of the USA stock you are looking at?')
+
+def comparison_stock_market(stock_abb, start_time=[2015,1,5], end_time=[2020,10,9]):
+    stock1= pdr.get_data_yahoo(stock_abb, 
+                            start=datetime.datetime(start_time[0], start_time[1], start_time[2]), 
+                            end=datetime.datetime(end_time[0], end_time[1], end_time[2]))
+    nasdaq= pdr.get_data_yahoo('^gspc', 
+                            start=datetime.datetime(start_time[0], start_time[1], start_time[2]), 
+                            end=datetime.datetime(end_time[0], end_time[1], end_time[2]))
+
+    nasdaq['PriceDiff'] = nasdaq['Close'].shift(-1) - nasdaq['Close']
+    nasdaq['Return'] = 100*nasdaq['PriceDiff'] /nasdaq['Close']
+    stock1['PriceDiff'] = stock1['Close'].shift(-1) - stock1['Close']
+    stock1['Return'] = 100*stock1['PriceDiff'] /stock1['Close']
+    stock1=stock1.fillna(np.mean(stock1['Return']))
+    nasdaq=nasdaq.fillna(np.mean(nasdaq['Return']))
+    
+    regr = linear_model.LinearRegression()
+    regr.fit(stock1,nasdaq['Return'])
+
+    print(stock1.columns)
+    print ('Coefficients: ',regr.coef_[7])
+    print(regr.intercept_ )   
+
+    line=stock1['Return']-regr.coef_[7]*nasdaq['Return']
+    line=regr.coef_[7]+regr.intercept_ 
+    fig, axes = plt.subplots(ncols=2, nrows=1, figsize=(15, 4))
+    ax = axes.ravel()
+#     ax[0].scatter(nasdaq['Return'],stock1['Return'])
+
+    ax[1].plot(nasdaq['Return'], label='NASDAQ')
+    ax[1].plot(stock1['Return'], label=stock_abb)
+    ax[1].set_title('Return % from '+str(start_time)+' to '+str(end_time))
+    ax[1].legend()
+    ax[1].axhline(0, color='red')
+
+    ax[0].scatter(nasdaq['Return'], stock1['Return'])
+    
+    ax[0].set_title('Return % from '+str(start_time)+' to '+str(end_time)+' X axis is the market')
+
+
+
+
+    ax[0].legend()
+    ax[0].axhline(0, color='red')
+    ax[0].axvline(0, color='red')
+
+
+comparison_stock_market(stock_abb,[2010,1,25],[2020,6,7])
